@@ -49,6 +49,7 @@ export default {
         { text: 'VsCode配置', link: '/CodePlugins/Env' },
         { text: '简单示例', link: '/CodePlugins/Simple' },
         { text: '简单参考', link: '/CodePlugins/Exsample' },
+        { text: '🔥 插件开发指南', link: '/CodePlugins/CookBook' },
         { text: '定时任务', link: '/CodePlugins/Scheduler' },
         { text: '调用资源目录', link: '/CodePlugins/GetDataPath' },
         { text: '提供配置项', link: '/CodePlugins/PluginsConfig' },
