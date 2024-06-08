@@ -3,10 +3,13 @@
 ::: tip
 
 - 🎉 该文档将从最基础的创建项目结构开始，直至创建一个**能正常使用功能**的GsCore插件。
+  - 包含基础的命令调用、配置文件持久化、数据库存读、网页控制台...等等！
+
+  - 得益于GsCore众多的内置函数接口，该教程完成的插件功能完成度很高，而教程长度并不长！
 
 - 🤗 该文档适用于**任何人**，哪怕*你没有最基本的Python知识*，也能通过该文档进行**学习**。
   - 但是你需要拥有基本的**耐心**，一颗善于**学习的心**、以及最基本的**互联网查找技能**
-  
+
 
 :::
 
@@ -373,13 +376,14 @@ from gsuid_core.utils.database.base_models import Bind
 
 
 # 创建一个类（在此时相当于数据库），继承基类Bind
-class WeatherBind(Bind):
+# 注意, 这里要添加 table=True 的参数，如果不添加，就不是建立表，而是单纯的继承
+class WeatherBind(Bind, table=True):
     # 这里的uid是基类定义好的，沿用下来可以轻松调用预先编写好的方法，例如获取全部、切换、删除、添加。
     # 在这里uid即是我们用户需要绑定的城市
     uid: Optional[str] = Field(default=None, title='城市')
 ```
 
-![image-20240601225427010](./../public/CookBook/image-20240601225427010.png)
+![image-20240609005228562](./../public/CookBook/image-20240609005228562.png)
 
 
 1. 返回`__init__.py`，在开头导入部分导入我们新建`database`模块中的`WeatherBind`类
@@ -389,12 +393,301 @@ from .database import WeatherBind
 ```
 
 2. 然后我们继续沿用`gs_weather_info`服务，在下面创建一个**触发器**
+   - 为了避免和其他插件可能的`绑定`命令冲突，这里最好加上前缀, 比如`tq`
 
 ```python
-@gs_weather_info.on_command('绑定城市')
+@gs_weather_info.on_command('tq绑定城市')
 async def bind_city(bot: Bot, ev: Event):
     pass
 ```
 
 3. 在`bind_city`中创建实际的代码
-4. 
+4. 以下为代码展示，依旧包含了相对应的注释，如果看不懂可以一行一行慢慢看。
+
+```python
+@gs_weather_info.on_command('tq绑定城市')
+async def bind_city(bot: Bot, ev: Event):
+    # 获取用户输入的城市，如果为空，做出提醒，并用return中断函数运行
+    text = ev.text.strip()
+    if not text:
+        return await bot.send('请输入城市名称！')
+
+    # 进行一次请求，我们只需要存储最后的城市ID即可
+    client = httpx.AsyncClient()
+    pos_resp = await client.get(
+        'https://geoapi.qweather.com/v2/city/lookup',
+        params={
+            'location': text,
+            'key': KEY,
+        },
+    )
+
+    pos_data = pos_resp.json()
+    pos_retcode = pos_data['code']
+
+    # 如果根据用户输入，无法找到对应城市，则发出提醒
+    if pos_retcode != '200':
+        return await bot.send('你输入的城市不存在, 请检查输入是否有误!')
+    else:
+        # 获取城市ID
+        pos_id = pos_data['location'][0]['id']
+        pos_name = pos_data['location'][0]['name']
+
+        # 这里我们要稍微处理一下ID，让他和城市名称组合再一起，然后再插入数据库
+        # ！因为之后我们还要用到城市名称！
+
+        # 这里我习惯用|进行分割
+        uuid = f'{pos_name}|{pos_id}'
+
+        # 然后把处理后的数据插入数据库，和UserID相对应
+        # 这个内置函数可以接受多个ID的插入，方便后续多绑定
+        await WeatherBind.insert_uid(
+            ev.user_id, ev.bot_id, uuid, is_digit=False
+        )
+        return await bot.send(f'绑定城市 {pos_name} 成功！')
+```
+
+:::tip
+
+在这里，由于继承了**GsCore**中的**基类数据库**，这里有很多**已经写好的方法**，方便你调取
+
+善于利用VSC的**提示**功能，根据**函数名**意思，应该能猜出来大部分函数的对应用法，
+
+每个函数，更提供了**非常详尽的注释**，方便你**专心于业务功能**。
+
+![image-20240609010120469](./../public/CookBook/image-20240609010120469.png)
+
+上图为**代码提示**，下图为**函数注释**
+
+![image-20240609010309426](./../public/CookBook/image-20240609010309426.png)
+
+:::
+
+5. 我们紧接着完成`tq删除绑定城市`，代码如下
+
+```python
+@gs_weather_info.on_command('tq删除绑定城市')
+async def unbind_city(bot: Bot, ev: Event):
+    # 获取当前激活的城市ID
+    pos_id = await WeatherBind.get_uid_by_game(ev.user_id, ev.bot_id)
+
+    # 如果存在绑定
+    if pos_id is not None:
+        # 则删除当前激活的ID
+        await WeatherBind.delete_uid(ev.user_id, ev.bot_id, pos_id)
+
+        # 不要忘了我们的pos_id是 城市名|城市id的组合
+        city_name = pos_id.split('|')[0]
+
+        # 然后发出消息
+        await bot.send(f'删除城市 {city_name} 成功！')
+    # 如果不存在，则发出相应提示
+    else:
+        # 调用bot发送消息
+        await bot.send(
+            '你还没有绑定任何城市噢！请使用 [tq绑定城市] 命令进行绑定！'
+        )
+```
+
+6. 接着我们回到最开始的`天气`命令，完成调用，代码如下
+
+```python
+# 这里我们额外添加一个触发器`on_suffix`，这个触发器用于在末尾触发命令
+# 加上之后，该触发器会响应用户的`漳州天气`指令，而不是只响应`天气漳州`
+@gs_weather_info.on_suffix('天气', block=True)
+@gs_weather_info.on_command('天气', block=True)
+async def send_weather_msg(bot: Bot, ev: Event):
+    # 获取用户输入的城市，如果为空，做出提醒，并用return中断函数运行
+    text = ev.text.strip()
+
+    # 创建一个请求客户端
+    client = httpx.AsyncClient()
+
+    # 如果用户没有输入任何参数
+    if not text:
+        # 进行检查是否有绑定
+        uuid = await WeatherBind.get_uid_by_game(ev.user_id, ev.bot_id)
+        # 如果连绑定都没有，则提醒用户
+        if uuid is None:
+            return await bot.send('请输入城市名称，或使用 tq城市绑定 命令！')
+        # 存在UUID的绑定，则我们进行分割
+        # 别忘了我们绑定的时候，UUID的值是 城市名|城市ID
+        pos_id, pos_name = uuid.split('|')
+    # 有输入参数则直接使用用户输入
+    else:
+        # 根据用户传入的信息，请求城市ID和城市完整名称
+        # ev是当前事件的一系列可用信息，例如ev.text就是去除了命令之后的用户输入
+        # 例如用户输入 天气漳州 ，ev.text = 漳州
+        # 要获取完整用户输入，ev.raw_text = 天气漳州，ev.command = 天气
+        pos_resp = await client.get(
+            'https://geoapi.qweather.com/v2/city/lookup',
+            params={
+                'location': text,
+                'key': KEY,
+            },
+        )
+        # 解析结果为pyhon中的字典
+        pos_data = pos_resp.json()
+        # 获取结果中的响应代码
+        pos_retcode = pos_data['code']
+
+        # 响应码不为200则发生了报错，我们把错误码返回给用户，便于定位错误信息
+        if pos_retcode != '200':
+            await bot.send(f'[天气] 获取天气信息失败！错误码为 {pos_retcode}')
+        else:
+            # 城市ID，就是要用这个ID请求下面的天气信息
+            pos_id = pos_data['location'][0]['id']
+            pos_name = pos_data['location'][0]['name']
+
+    # 再进行一次请求
+    weather_resp = await client.get(
+        'https://devapi.qweather.com/v7/weather/now',
+        params={
+            'location': pos_id,
+            'key': KEY,
+        },
+    )
+
+    weather_data = weather_resp.json()
+    weather_retcode = weather_data['code']
+
+    # 错误码处理
+    if weather_data['code'] != '200':
+        await bot.send(
+            f'[天气] 获取天气信息失败！错误码为 {weather_retcode}！'
+        )
+    else:
+        # 现在温度
+        now_temp = weather_data['now']['temp']
+        # 现在的体感温度
+        now_feels = weather_data['now']['feelsLike']
+
+        # 城市名称
+        pos_name = weather_data['location'][0]['name']
+
+        # 将结果进行字符串拼贴，便于把最后的结果呈现给用户
+        text = f'{pos_name}的天气是：{now_temp}度, 体感温度为: {now_feels}度！'
+
+        await bot.send(text)
+```
+
+7. 主要功能已经全部完成，可以运行机器人体验一下。
+
+<ChatPanel title="聊天界面">
+<ChatMessage nickname="Wuyi无疑">天气</ChatMessage>
+<ChatMessage nickname="GsCore">请输入城市名称，或使用 tq城市绑定 命令！</ChatMessage>
+<ChatMessage nickname="Wuyi无疑">tq城市绑定漳州</ChatMessage>
+<ChatMessage nickname="GsCore">绑定城市 漳州 成功！</ChatMessage>
+<ChatMessage nickname="Wuyi无疑">天气</ChatMessage>
+<ChatMessage nickname="GsCore">漳州的天气是：41度, 体感温度为: 37度！</ChatMessage></ChatPanel>
+
+## 6、增强部署者体验
+
+:::tip
+
+如果这个插件只是给自己用的，那么在上一步已经结束了。
+
+但是如果你想发到Git上，为了方便自己和其他部署者，你还需要额外再做一些操作！
+
+:::
+
+### 将数据库映射至网页控制台
+
+1. 将数据库映射至网页控制台, 在`database.py`中新增代码如下：
+
+```python
+from gsuid_core.webconsole.mount_app import PageSchema, GsAdminModel, site
+
+# 注册网页控制台的类
+@site.register_admin
+class WeatherBindadmin(GsAdminModel):
+    pk_name = 'id'
+    page_schema = PageSchema(
+        label='天气绑定管理',
+        icon='fa fa-users',
+    )  # type: ignore
+
+    # 配置管理模型
+    model = WeatherBind
+```
+
+![image-20240609020855870](./../public/CookBook/image-20240609020855870.png)
+
+2. 重启Gscore，打开网页控制台，输入账密登录之后，发现已经映射成功！
+
+![image-20240609021121756](./../public/CookBook/image-20240609021121756.png)
+
+### 将Key配置持久化并映射至网页控制台
+
+还记得吗，在编写命令的时候我们将`KEY = 'dc3fe7eb3fab424a8c91901bd8894aa9'`写入了`__init__.py`中，方便后续程序调用key，但是这么做有几个显著的缺点：
+
+1. 当你上传至Git的时候，很可能忘记**脱敏**，导致将自己的Key上传至公众平台
+2. 别人部署后，修改Key即为修改代码文件，为后续`git pull`带来不便
+3. 每次修改都要修改代码文件，不如**独立成配置化文件**
+
+那在GsCore中进行插件的**独立配置**，并不复杂，利用预先设定的方法，可以**轻松实现**！
+
+1. 我们新建一个文件，叫`config.py`，在里面进行编写。
+
+```python
+# 先导入基础配置模型
+from typing import Dict
+
+# 导包
+from gsuid_core.data_store import get_res_path
+
+# 然后添加到GsCore网页控制台中
+from gsuid_core.utils.plugins_config.gs_config import StringConfig
+from gsuid_core.utils.plugins_config.models import (
+    GSC,
+    GsStrConfig,
+)
+
+# 建立自己插件的CONFIG_DEFAULT
+# 名字无所谓, 类型一定是Dict[str, GSC]，以下为示例，可以添加无数个配置
+CONIFG_DEFAULT: Dict[str, GSC] = {
+    'tq_key': GsStrConfig(
+        '天气源Key',  # 这个是该配置的名称
+        '如果没有，需要自己申请',  # 这个是该配置的详细介绍
+        '',  # 这个是该配置的默认参数，这里我们直接为空即可
+    ),
+}
+
+# 设定一个配置文件（json）保存文件路径
+# 这里get_res_path()的作用是定位到 gsuid_core/data路径下
+CONFIG_PATH = get_res_path('Gs_Weather') / 'config.json'
+
+# 上面的路径为 gsuid_core/data/Gs_Weather/config.json
+
+# 分别传入 配置总名称（不要和其他插件重复），配置路径，以及配置模型
+tq_config = StringConfig('GsWeather', CONFIG_PATH, CONIFG_DEFAULT)
+```
+
+2. 然后在`__init__`中引用该配置`tq_config`， 代码修改如下：
+
+```python
+# 相对引用上面定义的配置
+from .config import tq_config
+
+# KEY直接调用配置项，配置名称要填入，然后引用data属性
+KEY = tq_config.get_config('tq_key').data
+```
+
+3. 这样就大功告成了，后续我们需要填入Key的话，可以有两个方法：
+   - 直接修改`gsuid_core/data/Gs_Weather/config.json`文件
+   - 或者打开网页控制台，你会发现已经有了对应的配置项
+
+![image-20240609022134459](./../public/CookBook/image-20240609022134459.png)
+
+## 7、其他问题
+
+遗留下来的其他问题，解决方案就留给你们自己补充思考了：
+
+- 天气API的访问在`__init__.py`中出现了两次，能否封装为一个函数，方便调用？
+- 在绑定城市的时候，并没有二次确认，万一API请求到了一个很离谱的城市，将会直接绑定成功，造成困扰。
+- 可否添加按钮，方便用户调用？
+- 帮助功能？
+- 定时天气推送？
+- 插件上传商店？
+- `天气`命令返回图片？
+

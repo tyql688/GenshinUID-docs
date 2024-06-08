@@ -39,13 +39,14 @@ export default {
         { text: '转URL图片发送', link: '/Advance/TransURL' },
         { text: 'MD模板和按钮模板', link: '/Advance/MarkdownTemplate' },
         { text: 'Core配置项', link: '/Advance/CoreConfig' },
+        { text: 'HTTP调用', link: '/Advance/HTTPCall' },
       ],
     },
     {
       text: ' 🔍️ 编写插件',
       collapsed: true,
       items: [
-        { text: '简单介绍', link: '/CodePlugins/Start' },
+        { text: '✨ 简单介绍', link: '/CodePlugins/Start' },
         { text: 'VsCode配置', link: '/CodePlugins/Env' },
         { text: '简单示例', link: '/CodePlugins/Simple' },
         { text: '简单参考', link: '/CodePlugins/Exsample' },

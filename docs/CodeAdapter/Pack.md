@@ -3,7 +3,8 @@
 ### gsuid_core.models
 
 ```python
-from typing import Any, Dict, List, Literal, Optional
+import asyncio
+from typing import Any, Dict, List, Tuple, Literal, Optional
 
 from msgspec import Struct
 
@@ -26,6 +27,8 @@ class MessageReceive(Struct):
 
 
 class Event(MessageReceive):
+    task_id: str = ''
+    task_event: Optional[asyncio.Event] = None
     real_bot_id: str = ''
     raw_text: str = ''
     command: str = ''
@@ -39,6 +42,8 @@ class Event(MessageReceive):
     file_name: Optional[str] = None
     file: Optional[str] = None
     file_type: Optional[Literal['url', 'base64']] = None
+    regex_group: Tuple[str, ...] = ()
+    regex_dict: Dict[str, str] = {}
 
 
 class MessageSend(Struct):
