@@ -57,6 +57,7 @@ export default {
         { text: '调用配置项', link: '/CodePlugins/GetPluginsConfig' },
         { text: '调用数据库', link: '/CodePlugins/PluginsDataBase' },
         { text: '多步会话', link: '/CodePlugins/Resp' },
+        { text: '任意位置调用Bot', link: '/CodePlugins/BotCall' },
         { text: '模块方法', link: '/CodePlugins/Class' },
       ],
     },
