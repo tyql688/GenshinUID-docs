@@ -1,6 +1,6 @@
 import { inBrowser, useRoute } from 'vitepress'
 import type { EnhanceAppContext, Theme } from 'vitepress'
-import DefaultTheme from 'vitepress/theme'
+import DefaultTheme from 'vitepress/theme-without-fonts'
 import { nextTick, onMounted, watch } from 'vue'
 import busuanzi from 'busuanzi.pure.js'
 import mediumZoom from 'medium-zoom'
