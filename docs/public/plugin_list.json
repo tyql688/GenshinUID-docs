@@ -111,6 +111,14 @@
       "type": "tip",
       "content": "普通",
       "info": "全功能CS2查询插件"
+    },
+    "ZZZeroUID": {
+      "link": "https://github.com/ZZZure/ZZZeroUID",
+      "avatar": "https://avatars.githubusercontent.com/u/167495548",
+      "branch": "master",
+      "type": "tip",
+      "content": "普通",
+      "info": "全功能绝区零查询插件"
     }
   },
   "extra": {
