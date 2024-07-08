@@ -80,6 +80,7 @@ export default {
         { text: 'WzryUID', link: '/PluginsHelp/WzryUID' },
         { text: 'MajsoulUID', link: '/PluginsHelp/MajsoulUID' },
         { text: 'LOLegendsUID', link: '/PluginsHelp/LOLegendsUID' },
+        { text: 'ZZZeroUID', link: '/PluginsHelp/ZZZeroUID' },
       ],
     },
   ],

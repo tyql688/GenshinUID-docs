@@ -65,6 +65,7 @@ export default withPwa(defineConfig({
           { text: '🏫 BlueArchiveUID', link: 'https://github.com/KimigaiiWuyi/BlueArchiveUID' },
           { text: '🀄 MajsoulUID', link: 'https://github.com/KimigaiiWuyi/MajsoulUID' },
           { text: '🦸‍♂️ LOLegendsUID', link: 'https://github.com/KimigaiiWuyi/LOLegendsUID' },
+          { text: '👁️ ZZZeroUID', link: 'https://github.com/ZZZure/ZZZeroUID' },
         ],
       },
       {

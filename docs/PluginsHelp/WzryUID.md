@@ -2,7 +2,7 @@
 
 ::: warning
 
-该文档可能更新不及时，请以插件实际功能为主
+该文档可能更新不及时，请以[插件](https://github.com/KimigaiiWuyi/WzryUID)实际功能为主
 
 :::
 
