@@ -119,6 +119,14 @@
       "type": "tip",
       "content": "普通",
       "info": "全功能绝区零查询插件"
+    },
+    "WutheringWavesUID": {
+      "link": "https://github.com/tyql688/WutheringWavesUID",
+      "avatar": "https://github.com/tyql688.png",
+      "branch": "master",
+      "type": "tip",
+      "content": "普通",
+      "info": "全功能鸣潮查询插件"
     }
   },
   "extra": {
